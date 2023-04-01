@@ -150,8 +150,8 @@ fn test_elgamal_encrypt() {
     let rh = h.scalar_mul(&r);
     let cb = pm.add(rh);
 
-    println!("{:?}", ca);
-    // println!("{:?} {:?}", ca, cb);
+    // println!("{:?}", ca);
+    println!("{:?} \n {:?}", ca, cb);
 
     let source = "
         use.std::crypto::elgamal_ecgfp5
@@ -200,8 +200,47 @@ fn test_elgamal_encrypt() {
     stack.reverse();
 
     let test = build_test!(source, &stack);
-    let strace = test.get_last_stack_state();
+    let binding = test.execute().unwrap();
+    let strace = binding.stack_outputs().stack();
 
-    println!("{:?}", strace);
+    let ca = group::ECExt5 {
+        x: Ext5::new(
+            strace[0],
+            strace[1],
+            strace[2],
+            strace[3],
+            strace[4]
+        ),
+        y: Ext5::new(
+            strace[5],
+            strace[6],
+            strace[7],
+            strace[8],
+            strace[9]
+        ),
+        point_at_infinity: Felt::ZERO,
+    };
+
+    let cb = group::ECExt5 {
+        x: Ext5::new(
+            strace[11],
+            strace[12],
+            strace[13],
+            strace[14],
+            strace[15]
+        ),
+        y: Ext5::new(
+            strace[16],
+            strace[17],
+            strace[18],
+            strace[19],
+            strace[20]
+        ),
+        point_at_infinity: Felt::ZERO,
+    };
+
+
+    println!("RESULTS\n\n{:?}\n{:?}", ca, cb);
+    
 
 }
