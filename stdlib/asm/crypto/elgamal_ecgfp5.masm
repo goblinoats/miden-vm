@@ -73,12 +73,12 @@ export.encrypt.20
     loc_store.17 #save Ca_y
     loc_store.18 #save Ca_inf
 
-    loc_load.3
-    loc_load.2
+    loc_load.13
+    loc_load.12
     push.0.0.0.0
-    loc_loadw.1
+    loc_loadw.11
     push.0.0.0.0
-    loc_loadw.0 # reload r onto stack
+    loc_loadw.10 # reload r onto stack
 
     loc_load.4 # reload H_inf
     loc_load.3 # reload H_y
