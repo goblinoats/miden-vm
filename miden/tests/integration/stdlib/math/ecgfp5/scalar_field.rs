@@ -3,7 +3,7 @@ use std::{cmp::PartialEq, ops::Mul};
 use vm_core::StarkField;
 
 #[derive(Copy, Clone, Debug)]
-struct Scalar {
+pub struct Scalar {
     pub limbs: [u32; 10],
 }
 
@@ -201,7 +201,7 @@ impl PartialEq for Scalar {
 }
 
 #[test]
-fn test_ec_ext5_scalar_arithmetic() {
+    fn test_ec_ext5_scalar_arithmetic() {
     let a = Scalar {
         limbs: [
             rand_utils::rand_value::<u32>() >> 1,

@@ -5,7 +5,7 @@ use test_case::test_case;
 use vm_core::{FieldElement, StarkField};
 
 #[derive(Copy, Clone, Debug)]
-struct ECExt5 {
+pub struct ECExt5 {
     pub x: Ext5,
     pub y: Ext5,
     pub point_at_infinity: Felt,

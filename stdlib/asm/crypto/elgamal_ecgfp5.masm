@@ -1,0 +1,113 @@
+use.std::math::ecgfp5::group
+
+export.gen_privatekey.8
+    exec.group::gen_mul
+end
+
+#! Given public key, point H generated in gen_privatekey as coordinates (X,Y) on stack
+#! and message M, elliptic curve points (a,b) also as coordinates (X,Y) on stack
+#! and random scalar r on stack
+#! this routine computes C_a, and C_b, as two elliptic curve points resulting from
+#! C_a = r*G, G is the generator of elliptic curve and
+#! C_b = M + r*H
+#! Expected stack state
+#! [H_x0, ..., H_x4, H_y0, ..., H_y4, H_inf, M_x0, ..., M_x4, M_y0, ..., M_y4, M_inf, r0, r1, ...]
+#!
+#! Final stack state
+#! [Ca_x0, ..., C_x4, Ca_y0, ..., Ca_y4, Ca_inf, Cb_x0, ..., Cb_x4, Cb_y0, ..., Cb_y4, Cb_inf]
+export.encrypt.20
+
+    loc_storew.0
+    dropw
+    loc_store.1 # Cache H_x
+    loc_storew.2
+    dropw
+    loc_store.3 # Cache H_y
+    loc_store.4 # Cache H_inf
+
+    loc_storew.5
+    dropw
+    loc_store.6 # Cache M_x
+    loc_storew.7
+    dropw
+    loc_store.8 # Cache M_y
+    loc_store.9 # Cache M_inf
+
+    loc_storew.10
+    dropw
+    loc_storew.11
+    dropw
+    loc_store.12
+    loc_store.13 # Cache r
+
+    push.0.0.0.0
+    loc_storew.14
+    dropw
+    push.0
+    loc_store.15 #initialize and cache Ca_x
+
+    push.0.0.0.0
+    loc_storew.16
+    dropw
+    push.0
+    loc_store.17 #initialize and cache Ca_y
+
+    push.0
+    loc_store.18 # init and cache Ca_inf
+
+    loc_load.13
+    loc_load.12
+    push.0.0.0.0
+    loc_loadw.11
+    push.0.0.0.0
+    loc_loadw.10 # reload r onto stack
+
+    exec.group::gen_mul
+
+    loc_storew.14
+    dropw
+    loc_store.15 #save Ca_x
+
+    loc_storew.16
+    dropw
+    loc_store.17 #save Ca_y
+    loc_store.18 #save Ca_inf
+
+    loc_load.3
+    loc_load.2
+    push.0.0.0.0
+    loc_loadw.1
+    push.0.0.0.0
+    loc_loadw.0 # reload r onto stack
+
+    loc_load.4 # reload H_inf
+    loc_load.3 # reload H_y
+    push.0.0.0.0
+    loc_loadw.2
+    loc_load.1
+    push.0.0.0.0
+    loc_loadw.0 #reload H_x
+
+    exec.group::mul
+
+    loc_load.9 #load M_inf
+    loc_load.8
+    push.0.0.0.0
+    loc_loadw.7 #load M_y
+    loc_load.6
+    push.0.0.0.0
+    loc_loadw.5 #load M_x
+
+    exec.group::add
+
+    loc_load.18 #reload Ca_inf
+    loc_load.17
+    push.0.0.0.0
+    loc_loadw.16 #reload Ca_y
+    loc_load.15
+    push.0.0.0.0
+    loc_loadw.14 #reload Ca_x
+
+
+end
+
