@@ -111,3 +111,13 @@ export.encrypt.20
 
 end
 
+#! Rerandomises the first half of an Elgamal ciphertext Ca given a public key H
+#! and random scalar r to produce a rerandomised ciphertext C'a
+#! Expected stack state
+#! [Ca_x0, ..., Ca_x4, Ca_y0, ..., Ca_y4, ..., H_x0, ..., H_x4, H_y0, ..., H_y4, H_inf, r0, r1, ...]
+#!
+#! Final stack state
+#! [C'a_x0, ..., C'a_x4, C'a_y0, ..., C'a_y4, C'a_inf]
+export.remask_ca.30
+    
+end
