@@ -111,13 +111,64 @@ export.encrypt.20
 
 end
 
-#! Rerandomises the first half of an Elgamal ciphertext Ca given a public key H
+#! Rerandomises the first half of an Elgamal ciphertext Ca
 #! and random scalar r to produce a rerandomised ciphertext C'a
 #! Expected stack state
-#! [Ca_x0, ..., Ca_x4, Ca_y0, ..., Ca_y4, ..., H_x0, ..., H_x4, H_y0, ..., H_y4, H_inf, r0, r1, ...]
+#! [Ca_x0, ..., Ca_x4, Ca_y0, ..., Ca_y4, Ca_inf, ..., r0, r1, ...]
 #!
 #! Final stack state
 #! [C'a_x0, ..., C'a_x4, C'a_y0, ..., C'a_y4, C'a_inf]
-export.remask_ca.30
+export.remask_ca.5
+    loc_storew.0
+    dropw
+    loc_store.1 # Cache Ca_x
+    loc_storew.2
+    dropw
+    loc_store.3 # Cache Ca_y
+    loc_store.4 # Cache Ca_inf
     
+    # Calculate g ^ r
+    exec.group::gen_mul
+
+    loc_load.4 #reload Ca_inf
+    loc_load.3
+    push.0.0.0.0
+    loc_loadw.2 #reload Ca_y
+    loc_load.1
+    push.0.0.0.0
+    loc_loadw.0 #reload Ca_x
+
+    # Calculate g ^ r + C_a
+    exec.group::add
+end
+
+#! Rerandomises the second half of an Elgamal ciphertext Cb given a public key H
+#! and random scalar r to produce a rerandomised ciphertext C'b
+#! Expected stack state
+#! [Cb_x0, ..., Cb_x4, Cb_y0, ..., Cb_y4, Cb_inf, H_x0, ..., H_x4, H_y0, ..., H_y4, H_inf, ..., r0, r1, ...]
+#!
+#! Final stack state
+#! [C'a_x0, ..., C'a_x4, C'a_y0, ..., C'a_y4, C'a_inf]
+export.remask_cb.14
+    loc_storew.0
+    dropw
+    loc_store.1 # Cache Cb_x
+    loc_storew.2
+    dropw
+    loc_store.3 # Cache Cb_y
+    loc_store.4 # Cache Cb_inf
+
+    # Calculate H^r
+    exec.group::mul
+
+    loc_load.4 #reload Cb_inf
+    loc_load.3
+    push.0.0.0.0
+    loc_loadw.2 #reload Cb_y
+    loc_load.1
+    push.0.0.0.0
+    loc_loadw.0 #reload Cb_x
+
+    # Calculate H^r + Cb
+    exec.group::add
 end

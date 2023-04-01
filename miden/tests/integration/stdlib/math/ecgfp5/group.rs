@@ -4,7 +4,7 @@ use std::ops::Add;
 use test_case::test_case;
 use vm_core::{FieldElement, StarkField};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub struct ECExt5 {
     pub x: Ext5,
     pub y: Ext5,

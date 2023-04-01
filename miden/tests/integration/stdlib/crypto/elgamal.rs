@@ -1,84 +1,74 @@
 use super::{build_test, Felt};
-use crate::stdlib::math::ecgfp5::base_field::{bv_or, Ext5};
-use std::{cmp::PartialEq, ops::{Mul, Add}};
+use crate::stdlib::math::ecgfp5::base_field::Ext5;
+use std::ops::Add;
 use crate::stdlib::math::ecgfp5::*;
-use crate::stdlib::math::ecgfp5::scalar_field::Scalar;
 use vm_core::{FieldElement, StarkField};
 
-#[test]
-fn test_elgamal_keygen() {
-    let p0 = group::ECExt5 {
-        x: Ext5::new(
+use rand_utils::rand_array;
+fn gen_random_private_key() -> [u32; 10] {
+    rand_array::<u32, 10>()
+}
+
+fn get_generator() -> group::ECExt5 {
+    group::ECExt5 {
+        x: base_field::Ext5::new(
             0xb2ca178ecf4453a1,
             0x3c757788836d3ea4,
             0x48d7f28a26dafd0b,
             0x1e0f15c7fd44c28e,
             0x21fa7ffcc8252211,
         ),
-        y: Ext5::new(
+        y: base_field::Ext5::new(
             0xb2ca178ecf4453a1,
             0x3c757788836d3ea4,
             0x48d7f28a26dafd0b,
             0x1e0f15c7fd44c28e,
             0x21fa7ffcc8252211,
-        ) * Ext5::from_int(4),
+        ) * base_field::Ext5::from_int(4),
         point_at_infinity: Felt::ZERO,
-    };
+    }
+}
 
-    let e = [
-        666904740u32,
-        1257318652u32,
-        4031728122u32,
-        3689598853u32,
-        703808805u32,
-        386793741u32,
-        2898811333u32,
-        4092670716u32,
-        1596344924u32,
-        1692681010u32,
-    ];
-    let q1 = p0.scalar_mul(&e);
+#[test]
+fn test_elgamal_keygen() {
+    let gen = get_generator();
+    let private_key = gen_random_private_key();
+    let q1 = gen.scalar_mul(&private_key);
 
-    let mut stack = [
-        666904740u64,
-        1257318652u64,
-        4031728122u64,
-        3689598853u64,
-        703808805u64,
-        386793741u64,
-        2898811333u64,
-        4092670716u64,
-        1596344924u64,
-        1692681010u64,
-    ];
+    let mut stack: [u64; 10] = private_key.iter().map(|x| *x as u64).collect::<Vec<u64>>().try_into().unwrap();
 
-    println!("{:?}", q1);
-
-    // let source = "
-    //     use.std::math::ecgfp5::group
-
-    //     begin
-    //         exec.group::mul
-    //     end";
-
-    // ";
     let source = "
         use.std::crypto::elgamal_ecgfp5
 
         begin
             exec.elgamal_ecgfp5::gen_privatekey
         end
-
     ";
 
     stack.reverse();
 
     let test = build_test!(source, &stack);
-    let strace = test.get_last_stack_state();
+    let binding = test.execute().unwrap();
+    let strace = binding.stack_outputs().stack();
+    let pk_st = group::ECExt5 {
+        x: Ext5::new(
+            strace[0],
+            strace[1],
+            strace[2],
+            strace[3],
+            strace[4]
+        ),
+        y: Ext5::new(
+            strace[5],
+            strace[6],
+            strace[7],
+            strace[8],
+            strace[9]
+        ),
+        point_at_infinity: Felt::ZERO,
+    };
 
-    println!("{:?}", strace);
-
-    
+    assert_eq!(q1, pk_st);
 }
 
 #[test]
@@ -87,49 +77,11 @@ fn test_elgamal_encrypt() {
     //r is 10 limbs
     //H and M are both x and y at point inf
     //11*2 inputs
-    let e = [
-        666904740u32,
-        1257318652u32,
-        3031728122u32,
-        2689598853u32,
-        703808805u32,
-        386793741u32,
-        2898811333u32,
-        4092670716u32,
-        1596344924u32,
-        1692681010u32,
-    ];
-    let r = [
-        666904740u32,
-        1257318652u32,
-        4031728122u32,
-        3689598853u32,
-        703808805u32,
-        386793741u32,
-        2898811333u32,
-        4092670716u32,
-        1596344924u32,
-        1692681010u32,
-    ];
+    let private_key = gen_random_private_key();
+    let r = gen_random_private_key();
 
-    let p0 = group::ECExt5 {
-        x: Ext5::new(
-            0xb2ca178ecf4453a1,
-            0x3c757788836d3ea4,
-            0x48d7f28a26dafd0b,
-            0x1e0f15c7fd44c28e,
-            0x21fa7ffcc8252211,
-        ),
-        y: Ext5::new(
-            0xb2ca178ecf4453a1,
-            0x3c757788836d3ea4,
-            0x48d7f28a26dafd0b,
-            0x1e0f15c7fd44c28e,
-            0x21fa7ffcc8252211,
-        ) * Ext5::from_int(4),
-        point_at_infinity: Felt::ZERO,
-    };
-    let police = [
+    let gen = get_generator();
+    let plaintext_scalar = [
         666904740u32,
         257318652u32,
         4031728122u32,
@@ -142,16 +94,13 @@ fn test_elgamal_encrypt() {
         1692681010u32,
     ];
 
-    let pm = p0.scalar_mul(&police);
+    let pm = gen.scalar_mul(&plaintext_scalar);
 
 
-    let ca = p0.scalar_mul(&r);
-    let h = p0.scalar_mul(&e);
+    let ca = gen.scalar_mul(&r);
+    let h = gen.scalar_mul(&private_key);
     let rh = h.scalar_mul(&r);
     let cb = pm.add(rh);
-
-    // println!("{:?}", ca);
-    println!("{:?} \n {:?}", ca, cb);
 
     let source = "
         use.std::crypto::elgamal_ecgfp5
@@ -159,7 +108,6 @@ fn test_elgamal_encrypt() {
         begin
             exec.elgamal_ecgfp5::encrypt
         end
-
     ";
 
     let mut stack = [
@@ -203,7 +151,7 @@ fn test_elgamal_encrypt() {
     let binding = test.execute().unwrap();
     let strace = binding.stack_outputs().stack();
 
-    let ca = group::ECExt5 {
+    let ca_st = group::ECExt5 {
         x: Ext5::new(
             strace[0],
             strace[1],
@@ -221,7 +169,7 @@ fn test_elgamal_encrypt() {
         point_at_infinity: Felt::ZERO,
     };
 
-    let cb = group::ECExt5 {
+    let cb_st = group::ECExt5 {
         x: Ext5::new(
             strace[11],
             strace[12],
@@ -239,63 +187,21 @@ fn test_elgamal_encrypt() {
         point_at_infinity: Felt::ZERO,
     };
 
-
-    println!("RESULTS\n\n{:?}\n{:?}", ca, cb);
-    
-
+    assert_eq!(ca_st, ca);
+    assert_eq!(cb_st, cb);
 }
 
 #[test]
 fn test_elgamal_remask() {
     // Also known as rerandomisation
-    // inputs r, H, Ca, Cb
-    // r is 10 limbs
-    // H, Ca, and Cb are 11 inputs each
-    let e = [
-        666904740u32,
-        1257318652u32,
-        3031728122u32,
-        2689598853u32,
-        703808805u32,
-        386793741u32,
-        2898811333u32,
-        4092670716u32,
-        1596344924u32,
-        1692681010u32,
-    ];
-    let r = [
-        111111111u32,
-        1257318652u32,
-        4031728122u32,
-        3689598853u32,
-        703808805u32,
-        386793741u32,
-        2898811333u32,
-        4092670716u32,
-        1596344924u32,
-        1692681010u32,
-    ];
+    // inputs r, H, Cb, Ca
+    // The private key
+    let private_key = gen_random_private_key();
+    let r = gen_random_private_key();
+    let r_prime = gen_random_private_key();
 
-    let p0 = group::ECExt5 {
-        x: Ext5::new(
-            0xb2ca178ecf4453a1,
-            0x3c757788836d3ea4,
-            0x48d7f28a26dafd0b,
-            0x1e0f15c7fd44c28e,
-            0x21fa7ffcc8252211,
-        ),
-        y: Ext5::new(
-            0xb2ca178ecf4453a1,
-            0x3c757788836d3ea4,
-            0x48d7f28a26dafd0b,
-            0x1e0f15c7fd44c28e,
-            0x21fa7ffcc8252211,
-        ) * Ext5::from_int(4),
-        point_at_infinity: Felt::ZERO,
-    };
-
-    // the plaintext message
-    let plaintext_pt = [
+    let gen = get_generator();
+    let plaintext_scalar = [
         666904740u32,
         257318652u32,
         4031728122u32,
@@ -308,26 +214,114 @@ fn test_elgamal_remask() {
         1692681010u32,
     ];
 
-    let pm = p0.scalar_mul(&plaintext_pt);
+    let pm = gen.scalar_mul(&plaintext_scalar);
 
-
-    let ca = p0.scalar_mul(&r);
-    let h = p0.scalar_mul(&e);
+    let ca = gen.scalar_mul(&r);
+    let h = gen.scalar_mul(&private_key);
     let rh = h.scalar_mul(&r);
     let cb = pm.add(rh);
 
-    //println!("{:?}", ca);
-    // println!("{:?} {:?}", ca, cb);
+    // ca and cb are the original plaintext
+    let r_prime_g = gen.scalar_mul(&r_prime);
+    let r_prime_h = h.scalar_mul(&r_prime);
+    let c_prime_a = ca.add(r_prime_g);
+    let c_prime_b = cb.add(r_prime_h);
 
     let source = "
         use.std::crypto::elgamal_ecgfp5
 
         begin
-            exec.elgamal_ecgfp5::remask
+            exec.elgamal_ecgfp5::remask_ca
         end
     ";
 
     let mut stack = [
+        ca.x.a0.as_int(),
+        ca.x.a1.as_int(),
+        ca.x.a2.as_int(),
+        ca.x.a3.as_int(),
+        ca.x.a4.as_int(),
+        ca.y.a0.as_int(),
+        ca.y.a1.as_int(),
+        ca.y.a2.as_int(),
+        ca.y.a3.as_int(),
+        ca.y.a4.as_int(),
+        ca.point_at_infinity.as_int(),
+        r_prime[0] as u64,
+        r_prime[1] as u64,
+        r_prime[2] as u64,
+        r_prime[3] as u64,
+        r_prime[4] as u64,
+        r_prime[5] as u64,
+        r_prime[6] as u64,
+        r_prime[7] as u64,
+        r_prime[8] as u64,
+        r_prime[9] as u64,
+    ];
+    stack.reverse();
+
+    let test = build_test!(source, &stack);
+    let binding = test.execute().unwrap();
+    let strace = binding.stack_outputs().stack();
+
+    let _r_prime_g_st = group::ECExt5 {
+        x: Ext5::new(
+            strace[0],
+            strace[1],
+            strace[2],
+            strace[3],
+            strace[4]
+        ),
+        y: Ext5::new(
+            strace[5],
+            strace[6],
+            strace[7],
+            strace[8],
+            strace[9]
+        ),
+        point_at_infinity: Felt::ZERO,
+    };
+
+    let c_prime_a_st = group::ECExt5 {
+        x: Ext5::new(
+            strace[0],
+            strace[1],
+            strace[2],
+            strace[3],
+            strace[4]
+        ),
+        y: Ext5::new(
+            strace[5],
+            strace[6],
+            strace[7],
+            strace[8],
+            strace[9]
+        ),
+        point_at_infinity: Felt::ZERO,
+    };
+
+    assert_eq!(c_prime_a, c_prime_a_st);
+    
+    let source = "
+        use.std::crypto::elgamal_ecgfp5
+
+        begin
+            exec.elgamal_ecgfp5::remask_cb
+        end
+    ";
+
+    let mut stack = [
+        cb.x.a0.as_int(),
+        cb.x.a1.as_int(),
+        cb.x.a2.as_int(),
+        cb.x.a3.as_int(),
+        cb.x.a4.as_int(),
+        cb.y.a0.as_int(),
+        cb.y.a1.as_int(),
+        cb.y.a2.as_int(),
+        cb.y.a3.as_int(),
+        cb.y.a4.as_int(),
+        cb.point_at_infinity.as_int(),
         h.x.a0.as_int(),
         h.x.a1.as_int(),
         h.x.a2.as_int(),
@@ -339,34 +333,40 @@ fn test_elgamal_remask() {
         h.y.a3.as_int(),
         h.y.a4.as_int(),
         h.point_at_infinity.as_int(),
-        pm.x.a0.as_int(),
-        pm.x.a1.as_int(),
-        pm.x.a2.as_int(),
-        pm.x.a3.as_int(),
-        pm.x.a4.as_int(),
-        pm.y.a0.as_int(),
-        pm.y.a1.as_int(),
-        pm.y.a2.as_int(),
-        pm.y.a3.as_int(),
-        pm.y.a4.as_int(),
-        pm.point_at_infinity.as_int(),
-        r[0] as u64,
-        r[1] as u64,
-        r[2] as u64,
-        r[3] as u64,
-        r[4] as u64,
-        r[5] as u64,
-        r[6] as u64,
-        r[7] as u64,
-        r[8] as u64,
-        r[9] as u64,
+        r_prime[0] as u64,
+        r_prime[1] as u64,
+        r_prime[2] as u64,
+        r_prime[3] as u64,
+        r_prime[4] as u64,
+        r_prime[5] as u64,
+        r_prime[6] as u64,
+        r_prime[7] as u64,
+        r_prime[8] as u64,
+        r_prime[9] as u64,
     ];
-
     stack.reverse();
 
     let test = build_test!(source, &stack);
-    let strace = test.get_last_stack_state();
+    let binding = test.execute().unwrap();
+    let strace = binding.stack_outputs().stack();
 
-    println!("{:?}", strace);
+    let c_prime_b_st = group::ECExt5 {
+        x: Ext5::new(
+            strace[0],
+            strace[1],
+            strace[2],
+            strace[3],
+            strace[4]
+        ),
+        y: Ext5::new(
+            strace[5],
+            strace[6],
+            strace[7],
+            strace[8],
+            strace[9]
+        ),
+        point_at_infinity: Felt::ZERO,
+    };
 
+    assert_eq!(c_prime_b, c_prime_b_st);
 }
